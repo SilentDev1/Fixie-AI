@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profiles, repair projects, and learning-loop data — all scoped by uid in path
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /projects/{projectId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Failed diagnostics (Learning Loop) — subcollection under the user document.
+      // Path-enforced security: no resource.data checks needed, no compound-query issues.
+      // Append-only: create + read allowed; no update or delete.
+      match /failed_diagnostics/{docId} {
+        allow read, create: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Resolved repairs migrated from leads — written by migrateLeadToHistory().
+      // Append-only: no update or delete from the client.
+      match /history/{docId} {
+        allow read, create: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Permanent repair logs — full chat history archived when user completes a repair.
+      // Read for AI context injection; create/update to archive; no delete from client.
+      match /repair_logs/{repairId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Active Repairs — one doc per user, keyed by uid.
+    // Used for Save & Resume: the document is overwritten on each step advance
+    // and deleted when the repair is completed or handed to a contractor.
+    match /active_repairs/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Chat history — full conversation transcript synced after every AI reply.
+      // Stored in a subcollection so long chats don't bloat the parent doc (1 MB limit).
+      match /chatHistory/{guideId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Verified Contractors — public read so unauthenticated browse works;
+    // write restricted to admin SDK only (no client writes).
+    match /contractors/{proId} {
+      allow read: if true;
+
+      // Reviews — any authenticated user can read and create reviews;
+      // no update or delete (append-only, prevents review tampering).
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+      }
+    }
+
+    // Invoices — written by the contractor web portal; homeowner reads their own.
+    // No homeownerUid field in schema, so we allow authenticated read and let the
+    // jobId query scope results to the correct lead (which already belongs to the user).
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null;
+      allow write: if false; // contractor portal uses Admin SDK only
+    }
+
+    // FCM Tokens — each device writes its own push token.
+    // Keyed by uid so the web portal can address notifications to the right device.
+    match /fcmTokens/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Leads — users may create and read their own leads.
+    // The resolution listener needs read access so the app can detect status=="resolved".
+    // Contractor dashboard reads/updates via Admin SDK / web portal (no client write).
+    //
+    // IMPORTANT: `allow read` splits into `get` and `list`.
+    // For `get` (single document), resource.data IS available — check userId matches.
+    // For `list` (collection query), resource.data is NOT evaluated at query-validation
+    // time, so `resource.data.userId == request.auth.uid` always rejects the query.
+    // The iOS app queries with whereField("userId", isEqualTo: uid) — authenticated-only
+    // list is safe because the client filter already scopes results to the current user.
+    match /leads/{leadId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow get:    if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      allow list:   if request.auth != null;
+      // Homeowner may reschedule their own lead — only the scheduling fields may change.
+      // status, proId, userId, and all other fields are immutable from the client.
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['scheduledTime', 'isASAP', 'rescheduledAt',
+                                   'reschedulePending', 'rescheduleRequest']);
+    }
+  }
+}

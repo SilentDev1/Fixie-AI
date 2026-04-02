@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Fixie uses your camera to photograph the broken item so the AI can diagnose the issue and guide your repair.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Fixie can record the sound your device makes to help diagnose mechanical problems.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Fixie adds your scheduled repair appointments to Apple Calendar so you never miss a technician visit.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fixie</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.fixie</string>
+		</dict>
+	</array>
+</dict>
+</plist>

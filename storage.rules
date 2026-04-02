@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Repair media — owner read/write only
+    match /users/{userId}/projects/{projectId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Contractor license certificates — public read so SFSafariViewController
+    // (unauthenticated HTTP) can load them. download token URLs with
+    // request.auth != null rules return 403 for browser-side fetches.
+    match /users/{userId}/licenses/{allPaths=**} {
+      allow read:  if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Contractor logos — public read so AsyncImage works without auth
+    match /users/{userId}/logo.png {
+      allow read: if true;
+    }
+
+    // Contractor storage (licenses, certs, logos under contractors/ namespace)
+    // Public read so SFSafariViewController and AsyncImage load without auth headers.
+    match /contractors/{contractorId}/{allPaths=**} {
+      allow read:  if true;
+      allow write: if request.auth != null && request.auth.uid == contractorId;
+    }
+
+    // Lead photos — authenticated write + read own upload so downloadURL() can fetch the token.
+    // The download token embedded in the URL is the only credential contractors need.
+    match /leads/{leadId}/{allPaths=**} {
+      allow create: if request.auth != null;
+      allow read:   if request.auth != null;
+    }
+  }
+}

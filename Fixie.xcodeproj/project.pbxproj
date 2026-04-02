@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		110F66312F6D9500004ADE40 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 110F66302F6D9500004ADE40 /* FirebaseAnalytics */; };
+		110F66332F6D9500004ADE40 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 110F66322F6D9500004ADE40 /* FirebaseAuth */; };
+		110F66352F6D9500004ADE40 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 110F66342F6D9500004ADE40 /* FirebaseFirestore */; };
+		110F66372F6D9500004ADE40 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 110F66362F6D9500004ADE40 /* FirebaseStorage */; };
+		110F66E52F705DF1004ADE40 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 110F66E42F705DF1004ADE40 /* FirebaseMessaging */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1140EE812F6C2E5E00548DC3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +37,22 @@
 		1140EE8A2F6C2E5E00548DC3 /* FixieUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FixieUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		110F66E72F7060A9004ADE40 /* Exceptions for "Fixie" folder in "Fixie" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1140EE722F6C2E5900548DC3 /* Fixie */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1140EE752F6C2E5900548DC3 /* Fixie */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				110F66E72F7060A9004ADE40 /* Exceptions for "Fixie" folder in "Fixie" target */,
+			);
 			path = Fixie;
 			sourceTree = "<group>";
 		};
@@ -52,6 +73,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				110F66312F6D9500004ADE40 /* FirebaseAnalytics in Frameworks */,
+				110F66372F6D9500004ADE40 /* FirebaseStorage in Frameworks */,
+				110F66E52F705DF1004ADE40 /* FirebaseMessaging in Frameworks */,
+				110F66332F6D9500004ADE40 /* FirebaseAuth in Frameworks */,
+				110F66352F6D9500004ADE40 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +98,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		110F66E32F705DF1004ADE40 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		1140EE6A2F6C2E5900548DC3 = {
 			isa = PBXGroup;
 			children = (
 				1140EE752F6C2E5900548DC3 /* Fixie */,
 				1140EE832F6C2E5E00548DC3 /* FixieTests */,
 				1140EE8D2F6C2E5E00548DC3 /* FixieUITests */,
+				110F66E32F705DF1004ADE40 /* Frameworks */,
 				1140EE742F6C2E5900548DC3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +146,11 @@
 			);
 			name = Fixie;
 			packageProductDependencies = (
+				110F66302F6D9500004ADE40 /* FirebaseAnalytics */,
+				110F66322F6D9500004ADE40 /* FirebaseAuth */,
+				110F66342F6D9500004ADE40 /* FirebaseFirestore */,
+				110F66362F6D9500004ADE40 /* FirebaseStorage */,
+				110F66E42F705DF1004ADE40 /* FirebaseMessaging */,
 			);
 			productName = Fixie;
 			productReference = 1140EE732F6C2E5900548DC3 /* Fixie.app */;
@@ -195,6 +234,10 @@
 			);
 			mainGroup = 1140EE6A2F6C2E5900548DC3;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				110F663C2F6DC1BB004ADE40 /* XCRemoteSwiftPackageReference "OpenAI" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1140EE742F6C2E5900548DC3 /* Products */;
 			projectDirPath = "";
@@ -395,11 +438,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Fixie/Fixie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6.2;
 				DEVELOPMENT_TEAM = ML28ZN5EN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fixie/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Fixie AI";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fixie AI uses your camera to identify appliances, diagnose problems, and overlay AR repair guidance.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fixie uses your location to provide weather-based safety warnings before repairs.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fixie listens to mechanical sounds in Listen mode to help diagnose equipment issues.";
+				INFOPLIST_KEY_NSWeatherKitUsageDescription = "Fixie uses WeatherKit to warn you about freeze risk, heat advisories, and cold-brittle conditions before you start a repair.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -410,7 +460,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = HDC.Fixie;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fixie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -427,11 +477,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Fixie/Fixie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6.2;
 				DEVELOPMENT_TEAM = ML28ZN5EN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fixie/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Fixie AI";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fixie AI uses your camera to identify appliances, diagnose problems, and overlay AR repair guidance.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fixie uses your location to provide weather-based safety warnings before repairs.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fixie listens to mechanical sounds in Listen mode to help diagnose equipment issues.";
+				INFOPLIST_KEY_NSWeatherKitUsageDescription = "Fixie uses WeatherKit to warn you about freeze risk, heat advisories, and cold-brittle conditions before you start a repair.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -442,7 +499,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = HDC.Fixie;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fixie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -506,7 +563,7 @@
 				DEVELOPMENT_TEAM = ML28ZN5EN6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = HDC.FixieUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fixie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -526,7 +583,7 @@
 				DEVELOPMENT_TEAM = ML28ZN5EN6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = HDC.FixieUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fixie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -578,6 +635,53 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+		110F663C2F6DC1BB004ADE40 /* XCRemoteSwiftPackageReference "OpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MacPaw/OpenAI.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.4.7;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		110F66302F6D9500004ADE40 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		110F66322F6D9500004ADE40 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		110F66342F6D9500004ADE40 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		110F66362F6D9500004ADE40 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		110F66E42F705DF1004ADE40 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110F662F2F6D9500004ADE40 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1140EE6B2F6C2E5900548DC3 /* Project object */;
 }
