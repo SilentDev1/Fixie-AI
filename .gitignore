@@ -1,0 +1,19 @@
+# Secrets — never commit
+*.p8
+*-adminsdk-*.json
+GoogleService-Info.plist
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.build/
