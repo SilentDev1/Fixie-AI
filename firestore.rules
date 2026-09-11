@@ -86,13 +86,16 @@ service cloud.firestore {
       allow get:    if request.auth != null
                     && resource.data.userId == request.auth.uid;
       allow list:   if request.auth != null;
-      // Homeowner may reschedule their own lead — only the scheduling fields may change.
+      // Homeowner may update scheduling fields and confirm repair completion.
       // status, proId, userId, and all other fields are immutable from the client.
       allow update: if request.auth != null
                     && resource.data.userId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['scheduledTime', 'isASAP', 'rescheduledAt',
-                                   'reschedulePending', 'rescheduleRequest']);
+                                   'reschedulePending', 'rescheduleRequest',
+                                   'homeownerResolved', 'homeownerResolvedAt',
+                                   'resolutionNotes',  'invoiceRequested',
+                                   'proNotification']);
     }
   }
 }

@@ -788,6 +788,7 @@ final class FirebaseService {
                         )
                         lead.statusRaw        = status
                         lead.assignedTechName = data["assignedTechName"] as? String ?? ""
+                        lead.invoiceUrl       = data["invoiceUrl"]       as? String ?? ""
                         // Derive pending state from rescheduleRequest.status (new schema);
                         // fall back to reschedulePending bool for legacy docs.
                         if let reqDict = data["rescheduleRequest"] as? [String: Any] {
@@ -865,6 +866,13 @@ final class FirebaseService {
                     guard change.type == .added || change.type == .modified else { continue }
                     let data   = change.document.data()
                     let leadId = change.document.documentID
+
+                    // Homeowner confirmed resolution — treat as resolved regardless of status field
+                    if data["homeownerResolved"] as? Bool == true {
+                        onResolved(leadId)
+                        continue
+                    }
+
                     guard let status = data["status"] as? String else { continue }
 
                     let pn    = data["proName"]         as? String ?? ""
@@ -916,6 +924,7 @@ final class FirebaseService {
                             )
                             lead.statusRaw        = status
                             lead.assignedTechName = data["assignedTechName"] as? String ?? ""
+                        lead.invoiceUrl       = data["invoiceUrl"]       as? String ?? ""
                             if let reqDict = data["rescheduleRequest"] as? [String: Any] {
                                 lead.reschedulePending = (reqDict["status"] as? String) == "pending"
                             } else {
@@ -1079,6 +1088,35 @@ final class FirebaseService {
         } catch {
             print("[Fixie] ⚠️ Reschedule API error: \(error.localizedDescription)")
             return false
+        }
+    }
+
+    // MARK: – Homeowner-initiated resolution
+
+    /// Called when the homeowner taps "Yes, it's fixed" on a past-appointment card.
+    /// Writes homeownerResolved fields + invoiceRequested flag to the lead doc so the
+    /// pro portal can see the confirmation, fill in resolution notes, and create an invoice.
+    /// Also notifies the pro by writing a proNotification field the portal polls.
+    func submitHomeownerResolution(leadId: String, resolutionNotes: String) async {
+        let db = Firestore.firestore()
+        var data: [String: Any] = [
+            "homeownerResolved":        true,
+            "homeownerResolvedAt":      FieldValue.serverTimestamp(),
+            "resolutionNotes":          resolutionNotes,
+            "invoiceRequested":         true,
+            "proNotification": [
+                "type":      "homeowner_resolved",
+                "message":   "The homeowner confirmed the repair is complete. Please review and create an invoice.",
+                "notes":     resolutionNotes,
+                "sentAt":    Timestamp(date: Date())
+            ]
+        ]
+        // Only update status if the rules permit it (best-effort — pro portal handles final status).
+        do {
+            try await db.collection("leads").document(leadId).updateData(data)
+            print("[Fixie] ✅ Homeowner resolution submitted for lead \(leadId)")
+        } catch {
+            print("[Fixie] ⚠️ submitHomeownerResolution: \(error.localizedDescription)")
         }
     }
 

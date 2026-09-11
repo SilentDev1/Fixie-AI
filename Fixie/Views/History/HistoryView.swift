@@ -488,11 +488,14 @@ private struct HistoryRowView: View {
                         .lineLimit(1)
                 }
                 // Contractor attribution badge
-                if let proName = entry.proName {
+                if entry.proName != nil {
+                    let displayName = entry.assignedTechName.isEmpty
+                        ? (entry.proName ?? "")
+                        : entry.assignedTechName
                     HStack(spacing: 4) {
                         Image(systemName: "person.badge.shield.checkmark.fill")
                             .font(.system(size: 10, weight: .semibold))
-                        Text("Fixed by \(proName)")
+                        Text("Fixed by \(displayName)")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                     }
                     .foregroundStyle(Theme.brandSecondary)
@@ -546,6 +549,9 @@ struct HistoryDetailView: View {
     @State private var resolvedProId: String = ""
     @State private var invoices: [Invoice] = []
     @State private var invoicesLoaded = false
+    @State private var invoiceToShare: [Any]? = nil
+    @State private var showShareSheet = false
+    @State private var showInvoiceViewer = false
 
     private var effectiveProId: String {
         !entry.proId.isEmpty ? entry.proId : resolvedProId
@@ -596,7 +602,10 @@ struct HistoryDetailView: View {
                     infoCard(label: "Symptom", value: entry.symptom)
 
                     // Contractor attribution card
-                    if let proName = entry.proName {
+                    if entry.proName != nil {
+                        let techDisplay = entry.assignedTechName.isEmpty
+                            ? (entry.proName ?? "")
+                            : entry.assignedTechName
                         VStack(alignment: .leading, spacing: Theme.spacingS) {
                             HStack(spacing: Theme.spacingM) {
                                 Image(systemName: "person.badge.shield.checkmark.fill")
@@ -606,7 +615,7 @@ struct HistoryDetailView: View {
                                     Text("Fixed by Contractor")
                                         .font(Theme.caption)
                                         .foregroundStyle(Theme.textTertiary)
-                                    Text(proName)
+                                    Text(techDisplay)
                                         .font(Theme.bodyBold)
                                         .foregroundStyle(Theme.brandSecondary)
                                     if !entry.proBusinessName.isEmpty {
@@ -724,6 +733,18 @@ struct HistoryDetailView: View {
                 RepairHistoryStore.shared.loadEntries()
             }
         }
+        .sheet(isPresented: $showInvoiceViewer) {
+            if let urlStr = entry.invoiceUrl.isEmpty ? nil : entry.invoiceUrl,
+               let url = URL(string: urlStr) {
+                InAppDocumentViewer(url: url, title: "Invoice")
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let items = invoiceToShare {
+                ShareSheet(activityItems: items)
+                    .ignoresSafeArea()
+            }
+        }
         .task(id: entry.leadId + "_invoices") {
             guard entry.proName != nil, !entry.leadId.isEmpty else { return }
             invoices = await FirebaseService.shared.fetchInvoices(leadId: entry.leadId)
@@ -749,7 +770,22 @@ struct HistoryDetailView: View {
                 }
             }
 
-            if invoicesLoaded && invoices.isEmpty {
+            // Direct invoice URL — available as soon as the contractor creates the invoice
+            if !entry.invoiceUrl.isEmpty {
+                Button {
+                    showInvoiceViewer = true
+                } label: {
+                    Label("View Your Invoice", systemImage: "doc.text.magnifyingglass")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(hex: 0x2979FF), in: RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if invoicesLoaded && invoices.isEmpty && entry.invoiceUrl.isEmpty {
                 Text("No invoice on file")
                     .font(Theme.caption)
                     .foregroundStyle(Theme.textTertiary)
@@ -757,6 +793,40 @@ struct HistoryDetailView: View {
 
             ForEach(invoices) { invoice in
                 InvoiceCardView(invoice: invoice)
+
+                HStack(spacing: Theme.spacingS) {
+                    // Share / Save to Files — shares the live web invoice URL
+                    Button {
+                        let id = invoice.jobId.isEmpty ? invoice.id : invoice.jobId
+                        if let url = URL(string: "https://fixieai.app/invoice/\(id)") {
+                            invoiceToShare = [url]
+                            showShareSheet = true
+                        }
+                    } label: {
+                        Label("Save / Share", systemImage: "square.and.arrow.up")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: 0x2979FF))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color(hex: 0x2979FF).opacity(0.1),
+                                        in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Print
+                    Button {
+                        printInvoice(invoice)
+                    } label: {
+                        Label("Print", systemImage: "printer")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.05),
+                                        in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
         .padding(Theme.spacingM)
@@ -774,4 +844,92 @@ struct HistoryDetailView: View {
         .padding(Theme.spacingM)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.radiusS))
     }
+
+    // Renders the invoice SwiftUI view to a PDF file in the temp directory.
+    @MainActor
+    private func renderInvoicePDF(_ invoice: Invoice) -> URL {
+        let content = InvoiceCardView(invoice: invoice)
+            .frame(width: 360)
+            .padding(24)
+            .background(Color(hex: 0x1A1A1F))
+            .preferredColorScheme(.dark)
+
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 2.0   // print-quality resolution
+
+        let name = "Invoice-\(invoice.invoiceNumber.isEmpty ? invoice.id : invoice.invoiceNumber).pdf"
+        let url  = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+
+        renderer.render { size, ctx in
+            var box = CGRect(origin: .zero, size: size)
+            guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else { return }
+            pdf.beginPDFPage(nil)
+            ctx(pdf)
+            pdf.endPDFPage()
+            pdf.closePDF()
+        }
+        return url
+    }
+
+    private func printInvoice(_ invoice: Invoice) {
+        let id  = invoice.jobId.isEmpty ? invoice.id : invoice.jobId
+        guard let url = URL(string: "https://fixieai.app/invoice/\(id)") else { return }
+        WebInvoicePrinter.shared.startPrint(url: url, jobName: "Invoice \(invoice.invoiceNumber)")
+    }
 }
+
+
+// MARK: – Web invoice printer
+// WKWebView MUST be in the window hierarchy to receive network access on iOS.
+// We attach it hidden, wait for the page to finish loading, then print and remove it.
+import WebKit
+
+final class WebInvoicePrinter: NSObject, WKNavigationDelegate {
+    static let shared = WebInvoicePrinter()
+    private var webView: WKWebView?
+    private var jobName = ""
+
+    func startPrint(url: URL, jobName: String) {
+        self.jobName = jobName
+        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 612, height: 792))
+        wv.isHidden = true
+        wv.navigationDelegate = self
+        webView = wv
+        guard let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow }) else { return }
+        window.addSubview(wv)
+        wv.load(URLRequest(url: url))
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        let ctrl = UIPrintInteractionController.shared
+        let info = UIPrintInfo(dictionary: nil)
+        info.outputType = .general
+        info.jobName = jobName
+        ctrl.printInfo = info
+        ctrl.printFormatter = webView.viewPrintFormatter()
+        ctrl.present(animated: true) { [weak self] _, _, _ in
+            self?.webView?.removeFromSuperview()
+            self?.webView = nil
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        Swift.print("[Fixie] WebInvoicePrinter failed: \(error.localizedDescription)")
+        webView.removeFromSuperview()
+        self.webView = nil
+    }
+}
+
+// MARK: – Share sheet wrapper
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+

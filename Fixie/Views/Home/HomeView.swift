@@ -14,6 +14,8 @@ struct HomeView: View {
     @State private var rescheduleJob:       ServiceJob?         = nil
     @State private var sessionToDelete:     ActiveSession?      = nil
     @State private var leadToCancel:        ServiceJob?         = nil
+    @State private var jobToResolve:        ServiceJob?         = nil   // "Yes, fixed" → resolution sheet
+    @State private var jobToRescheduleFromPast: ServiceJob?     = nil   // "Not yet" → reschedule dialog
 
 
     private let columns = [
@@ -144,6 +146,33 @@ struct HomeView: View {
                 .presentationDetents([.height(460)])
                 .presentationDragIndicator(.visible)
                 .preferredColorScheme(.dark)
+            }
+            // Resolution sheet — "Yes, it's fixed" on a past-appointment card
+            .sheet(item: $jobToResolve) { job in
+                RepairResolutionSheet(job: job) { notes in
+                    viewModel.confirmRepairCompleted(leadId: job.id, resolutionNotes: notes)
+                    jobToResolve = nil
+                }
+                .presentationDetents([.height(380)])
+                .presentationDragIndicator(.visible)
+                .preferredColorScheme(.dark)
+            }
+            // "Not yet" reschedule dialog — asks if the user wants to reschedule
+            .confirmationDialog(
+                "Need to Reschedule?",
+                isPresented: Binding(
+                    get: { jobToRescheduleFromPast != nil },
+                    set: { if !$0 { jobToRescheduleFromPast = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Yes, Reschedule") {
+                    if let job = jobToRescheduleFromPast { rescheduleJob = job }
+                    jobToRescheduleFromPast = nil
+                }
+                Button("No, Keep as Is", role: .cancel) { jobToRescheduleFromPast = nil }
+            } message: {
+                Text("The appointment time has passed. Would you like to request a new time?")
             }
             // Delete paused repair confirmation
             .confirmationDialog(
@@ -579,7 +608,8 @@ struct HomeView: View {
                             proRescheduled: viewModel.proRescheduledLeadIds.contains(job.id),
                             onReschedule: { rescheduleJob = job },
                             onDelete: { leadToCancel = job },
-                            onRepairConfirmed: { viewModel.confirmRepairCompleted(leadId: job.id) }
+                            onRepairConfirmed: { jobToResolve = job },
+                            onNotYet: { jobToRescheduleFromPast = job }
                         ) {
                             // Clear "rescheduled" badge when user opens the card
                             viewModel.proRescheduledLeadIds.remove(job.id)
@@ -735,11 +765,11 @@ private struct JobActivityCard: View {
     let proRescheduled:     Bool           // pro changed the appointment time (cloud push received)
     let onReschedule:       () -> Void
     var onDelete:           (() -> Void)? = nil
-    var onRepairConfirmed:  (() -> Void)? = nil  // "Yes, it's fixed!" on past-appointment prompt
+    var onRepairConfirmed:  (() -> Void)? = nil  // "Yes, it's fixed!" → HomeView shows resolution sheet
+    var onNotYet:           (() -> Void)? = nil  // "Not yet" → HomeView asks about reschedule
     let onTap:              () -> Void
 
-    @State private var glowPulse    = false
-    @State private var notYetTapped = false  // collapses the prompt without removing the card
+    @State private var glowPulse = false
 
     private let cardW: CGFloat = 240
     private let cardH: CGFloat = 130
@@ -959,26 +989,22 @@ private struct JobActivityCard: View {
                     }
                 }
 
-                // Past-appointment overlay — shown when scheduled time has elapsed
-                // and the user hasn't tapped "Not yet" to dismiss for this session.
-                if job.isAppointmentPast && !notYetTapped {
+                // Past-appointment overlay — shown when scheduled time has elapsed.
+                if job.isAppointmentPast {
                     ZStack {
-                        Color.black.opacity(0.72)
+                        Color.black.opacity(0.75)
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         VStack(spacing: 6) {
                             Text("Appointment passed")
                                 .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(.white.opacity(0.65))
                                 .tracking(0.3)
                             Text("Was it repaired?")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundStyle(.white)
                             HStack(spacing: 10) {
-                                // Yes — remove card
-                                Button {
-                                    onRepairConfirmed?()
-                                } label: {
-                                    Text("Yes, it's fixed ✓")
+                                Button { onRepairConfirmed?() } label: {
+                                    Text("Yes, fixed ✓")
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundStyle(.black)
                                         .padding(.horizontal, 12)
@@ -986,10 +1012,7 @@ private struct JobActivityCard: View {
                                         .background(Theme.brandPrimary, in: Capsule())
                                 }
                                 .buttonStyle(.plain)
-                                // Not yet — collapse overlay, keep card
-                                Button {
-                                    withAnimation(.spring(response: 0.3)) { notYetTapped = true }
-                                } label: {
+                                Button { onNotYet?() } label: {
                                     Text("Not yet")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(.white.opacity(0.75))
@@ -1098,6 +1121,98 @@ private struct ContinueRepairCard: View {
     }
 }
 
+
+// MARK: – Repair Resolution Sheet
+
+private struct RepairResolutionSheet: View {
+    let job: ServiceJob
+    let onSubmit: (String) -> Void   // passes resolution notes
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var notes = ""
+    @FocusState private var focused: Bool
+
+    private var deviceLabel: String {
+        job.deviceModel.isEmpty ? job.symptom : job.deviceModel
+    }
+
+    var body: some View {
+        ZStack {
+            Color(hex: 0x0D0D0F).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: Theme.spacingL) {
+                // Header
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Repair Complete")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Tell us what was fixed on your \(deviceLabel) so we can update your history and notify \(job.proBusinessName.isEmpty ? "the pro" : job.proBusinessName).")
+                        .font(Theme.bodyRegular)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // Notes input
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What was repaired?")
+                        .font(Theme.caption)
+                        .foregroundStyle(Theme.textTertiary)
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(Color.white.opacity(focused ? 0.25 : 0.08), lineWidth: 1)
+                            )
+                        if notes.isEmpty {
+                            Text("e.g. Replaced the heating element, cleaned filters…")
+                                .font(Theme.bodyRegular)
+                                .foregroundStyle(Theme.textTertiary)
+                                .padding(12)
+                                .allowsHitTesting(false)
+                        }
+                        TextEditor(text: $notes)
+                            .font(Theme.bodyRegular)
+                            .foregroundStyle(Theme.textPrimary)
+                            .scrollContentBackground(.hidden)
+                            .padding(8)
+                            .focused($focused)
+                    }
+                    .frame(height: 110)
+                }
+
+                // Info pill
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.brandPrimary)
+                    Text("An invoice request will be sent to the pro.")
+                        .font(Theme.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .padding(10)
+                .background(Theme.brandPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                Spacer()
+
+                // Submit
+                Button {
+                    let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+                    onSubmit(trimmed.isEmpty ? "Repair confirmed by homeowner." : trimmed)
+                } label: {
+                    Text("Submit & Move to History")
+                        .font(Theme.bodyBold)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.spacingM)
+                        .background(Theme.brandPrimary, in: RoundedRectangle(cornerRadius: Theme.radiusM))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(Theme.spacingL)
+        }
+        .onAppear { focused = true }
+    }
+}
 
 #Preview {
     HomeView().preferredColorScheme(.dark)

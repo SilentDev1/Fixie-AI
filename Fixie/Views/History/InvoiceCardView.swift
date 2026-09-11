@@ -43,7 +43,8 @@ struct InvoiceCardView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color(hex: 0x2979FF).opacity(0.15), in: Capsule())
-                    if !invoice.status.isEmpty {
+                    // Only show badge for meaningful statuses — hide "draft"
+                    if invoice.status.lowercased() == "paid" || invoice.status.lowercased() == "sent" {
                         Text(invoice.status.uppercased())
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                             .foregroundStyle(statusColor)

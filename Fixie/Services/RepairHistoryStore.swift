@@ -75,37 +75,41 @@ final class RepairHistoryStore {
     /// Creates a history entry from a contractor-resolved lead.
     /// Skips silently if an entry for this leadId already exists (deduplication).
     func saveFromResolvedLead(
-        leadId:          String,
-        categoryRaw:     String,
-        deviceModel:     String,
-        symptom:         String,
-        proName:         String?,
-        proPhone:        String?,
-        proBusinessName: String,
-        proLogoUrl:      String  = "",
-        resolutionNotes: String,
-        resolvedAt:      Date,
-        thumbnailUrl:    String  = "",
-        proId:           String  = ""
+        leadId:           String,
+        categoryRaw:      String,
+        deviceModel:      String,
+        symptom:          String,
+        proName:          String?,
+        proPhone:         String?,
+        proBusinessName:  String,
+        proLogoUrl:       String  = "",
+        resolutionNotes:  String,
+        resolvedAt:       Date,
+        thumbnailUrl:     String  = "",
+        proId:            String  = "",
+        assignedTechName: String  = "",
+        invoiceUrl:       String  = ""
     ) {
         guard !hasEntry(for: leadId) else { return }   // already saved — skip
         let title = deviceModel.isEmpty ? "Service Repair" : deviceModel
         let entry = RepairHistoryEntry(
-            categoryRaw:     categoryRaw,
-            title:           title,
-            subtitle:        proBusinessName,
-            symptom:         symptom,
-            date:            resolvedAt,
-            stepsTotal:      1,
-            stepsCompleted:  1,    // contractor completed the repair
-            proName:         proName,
-            proPhone:        proPhone,
-            proBusinessName: proBusinessName,
-            proLogoUrl:      proLogoUrl,
-            resolutionNotes: resolutionNotes,
-            leadId:          leadId,
-            thumbnailUrl:    thumbnailUrl,
-            proId:           proId
+            categoryRaw:      categoryRaw,
+            title:            title,
+            subtitle:         proBusinessName,
+            symptom:          symptom,
+            date:             resolvedAt,
+            stepsTotal:       1,
+            stepsCompleted:   1,    // contractor completed the repair
+            proName:          proName,
+            proPhone:         proPhone,
+            proBusinessName:  proBusinessName,
+            proLogoUrl:       proLogoUrl,
+            resolutionNotes:  resolutionNotes,
+            leadId:           leadId,
+            thumbnailUrl:     thumbnailUrl,
+            proId:            proId,
+            assignedTechName: assignedTechName,
+            invoiceUrl:       invoiceUrl
         )
         context.insert(entry)
         try? context.save()

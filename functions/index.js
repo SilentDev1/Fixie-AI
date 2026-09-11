@@ -185,6 +185,75 @@ exports.notifyLeadStatusChange = onDocumentUpdated(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// notifyProHomeownerResolved
+// Trigger: leads/{leadId} updated with homeownerResolved: true (first time)
+// Sends FCM push to the pro so they know the homeowner confirmed the repair,
+// invoice is requested, and any resolution notes from the customer.
+// Pro's FCM token is read from contractors/{proId}.fcmToken or
+// fcmTokens/{proId}.tokens[] (same two-path lookup used for homeowner).
+// ─────────────────────────────────────────────────────────────────────────────
+exports.notifyProHomeownerResolved = onDocumentUpdated(
+  "leads/{leadId}",
+  async (event) => {
+    const before = event.data.before.data();
+    const after  = event.data.after.data();
+
+    if (!before || !after) return;
+
+    // Only fire once — when homeownerResolved transitions false → true
+    if (before.homeownerResolved || !after.homeownerResolved) return;
+
+    const proId  = after.proId;
+    const leadId = event.params.leadId;
+
+    if (!proId) {
+      console.log("[Fixie] notifyProHomeownerResolved: no proId on lead — skipping");
+      return;
+    }
+
+    const db     = getFirestore();
+    const device = (after.deviceModel || "").trim() || null;
+    const notes  = (after.resolutionNotes || "").trim();
+
+    const body = device
+      ? `The homeowner confirmed the ${device} repair is complete.${notes ? " Notes: " + notes : ""}`
+      : `The homeowner confirmed the repair is complete.${notes ? " Notes: " + notes : ""}`;
+
+    // Resolve pro's FCM token (same two-path strategy as homeowner)
+    const proToken = await getFCMToken(db, proId);
+
+    if (!proToken) {
+      console.log(`[Fixie] notifyProHomeownerResolved: no FCM token for pro ${proId}`);
+      return;
+    }
+
+    const message = {
+      token: proToken,
+      notification: {
+        title: "Repair Confirmed by Homeowner ✓",
+        body,
+      },
+      apns: {
+        payload: { aps: { sound: "default", badge: 1 } },
+      },
+      data: {
+        leadId,
+        type:              "homeowner_resolved",
+        invoiceRequested:  "true",
+        resolutionNotes:   notes,
+      },
+    };
+
+    try {
+      const msgId = await getMessaging().send(message);
+      console.log(`[Fixie] ✅ Pro notified of homeowner resolution: ${msgId}`);
+    } catch (err) {
+      console.error(`[Fixie] ⚠️ Pro resolution notification failed: ${err.message}`);
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // aggregateReview
 // Trigger: new document in contractors/{proId}/reviews/{reviewId}
 // Recalculates averageRating (1 decimal) and reviewCount on the parent

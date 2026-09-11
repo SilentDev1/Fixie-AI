@@ -24,6 +24,7 @@ struct ActiveServiceLead: Identifiable, Codable, Equatable, Sendable {
     var proAddress:      String = "" // e.g. "310 Daniel Webster Hwy, Nashua, NH"
     var statusRaw:         String = "claimed" // Firestore status field — drives ServiceJob.Status
     var assignedTechName:  String = ""        // specific technician dispatched (may differ from owner)
+    var invoiceUrl:        String = ""        // direct URL to the invoice page (set when invoiceCreated==true)
     var reschedulePending: Bool   = false     // homeowner submitted reschedule, awaiting tech confirmation
     var estimatedArrival:  Date?  = nil // set by contractor; nil = unknown ETA
     var scheduledTime:   Date? = nil  // homeowner-requested scheduled time (nil = ASAP)

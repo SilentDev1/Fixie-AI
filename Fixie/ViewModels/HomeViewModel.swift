@@ -246,6 +246,8 @@ final class HomeViewModel {
                         let pPhone   = data["proPhone"]        as? String ?? resolvedLead?.proPhone
                         let pBiz     = data["proBusinessName"] as? String ?? resolvedLead?.proBusinessName ?? ""
                         let proId    = data["proId"]           as? String ?? resolvedLead?.proId ?? ""
+                        let techName   = data["assignedTechName"] as? String ?? resolvedLead?.assignedTechName ?? ""
+                        let invoiceUrl = data["invoiceUrl"]       as? String ?? resolvedLead?.invoiceUrl ?? ""
                         let resolvedAt = (data["resolvedAt"] as? Timestamp)?.dateValue() ?? Date()
 
                         // Logo: prefer in-memory lead (already fetched), fall back to Firestore
@@ -258,18 +260,20 @@ final class HomeViewModel {
                         let thumbnailUrl = (data["imageUrls"] as? [String])?.first ?? ""
 
                         RepairHistoryStore.shared.saveFromResolvedLead(
-                            leadId:          leadId,
-                            categoryRaw:     category,
-                            deviceModel:     device,
-                            symptom:         symptom,
-                            proName:         pName,
-                            proPhone:        pPhone,
-                            proBusinessName: pBiz,
-                            proLogoUrl:      logoUrl,
-                            resolutionNotes: notes,
-                            resolvedAt:      resolvedAt,
-                            thumbnailUrl:    thumbnailUrl,
-                            proId:           proId
+                            leadId:           leadId,
+                            categoryRaw:      category,
+                            deviceModel:      device,
+                            symptom:          symptom,
+                            proName:          pName,
+                            proPhone:         pPhone,
+                            proBusinessName:  pBiz,
+                            proLogoUrl:       logoUrl,
+                            resolutionNotes:  notes,
+                            resolvedAt:       resolvedAt,
+                            thumbnailUrl:     thumbnailUrl,
+                            proId:            proId,
+                            assignedTechName: techName,
+                            invoiceUrl:       invoiceUrl
                         )
                     }
                     if wasActive { await self.refreshActiveSession() }
@@ -319,9 +323,37 @@ final class HomeViewModel {
 
     // MARK: – Confirm past appointment was repaired
 
-    /// Called when the user taps "Yes, it's fixed!" on a past-appointment card.
-    /// Removes the card locally and cleans up, same as a cancel but semantically a completion acknowledgement.
-    func confirmRepairCompleted(leadId: String) {
+    /// Called when the user submits "Yes, it's fixed" with optional notes.
+    /// 1. Saves a history entry immediately.
+    /// 2. Submits resolution + invoice request to Firestore so the pro is notified.
+    /// 3. Removes the card from the carousel.
+    func confirmRepairCompleted(leadId: String, resolutionNotes: String) {
+        let lead = activeServiceLeads.first { $0.leadId == leadId }
+        // Save to local history right away
+        RepairHistoryStore.shared.saveFromResolvedLead(
+            leadId:           leadId,
+            categoryRaw:      lead?.category           ?? "",
+            deviceModel:      lead?.deviceModel        ?? "",
+            symptom:          lead?.symptom            ?? "",
+            proName:          lead?.proName.isEmpty == false ? lead?.proName : nil,
+            proPhone:         lead?.proPhone,
+            proBusinessName:  lead?.proBusinessName    ?? "",
+            proLogoUrl:       lead?.logoUrl            ?? "",
+            resolutionNotes:  resolutionNotes,
+            resolvedAt:       Date(),
+            thumbnailUrl:     lead?.thumbnailUrl       ?? "",
+            proId:            lead?.proId              ?? "",
+            assignedTechName: lead?.assignedTechName   ?? "",
+            invoiceUrl:       lead?.invoiceUrl         ?? ""
+        )
+        // Notify pro + request invoice via Firestore (fire-and-forget)
+        Task {
+            await FirebaseService.shared.submitHomeownerResolution(
+                leadId: leadId,
+                resolutionNotes: resolutionNotes
+            )
+        }
+        // Remove from active carousel
         cancelServiceLead(leadId: leadId)
     }
 

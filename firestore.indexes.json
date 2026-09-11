@@ -7,6 +7,14 @@
         { "fieldPath": "status",     "order": "ASCENDING" },
         { "fieldPath": "categories", "arrayConfig": "CONTAINS" }
       ]
+    },
+    {
+      "collectionGroup": "invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "jobId",     "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -20,8 +20,10 @@ final class RepairHistoryEntry {
     var resolutionNotes: String = "" // What the contractor did to fix it
     var leadId:          String = "" // Firestore lead doc ID — used to prevent duplicate history entries
     var thumbnailUrl:    String = "" // Remote image URL for contractor-resolved repairs (lead imageUrls[0])
-    var proId:           String = "" // contractors/{proId} — for submitting a review
-    var hasReviewed:     Bool   = false // true once user submits a rating for this repair
+    var proId:            String = "" // contractors/{proId} — for submitting a review
+    var hasReviewed:      Bool   = false // true once user submits a rating for this repair
+    var assignedTechName: String = "" // technician who actually performed the repair (may differ from owner)
+    var invoiceUrl:       String = "" // direct URL to the contractor's invoice page
 
     init(
         id: UUID = UUID(),
@@ -32,16 +34,18 @@ final class RepairHistoryEntry {
         date: Date = .now,
         stepsTotal: Int,
         stepsCompleted: Int,
-        thumbnailData:   Data?   = nil,
-        proName:         String? = nil,
-        proPhone:        String? = nil,
-        proBusinessName: String  = "",
-        proLogoUrl:      String  = "",
-        resolutionNotes: String  = "",
-        leadId:          String  = "",
-        thumbnailUrl:    String  = "",
-        proId:           String  = "",
-        hasReviewed:     Bool    = false
+        thumbnailData:    Data?   = nil,
+        proName:          String? = nil,
+        proPhone:         String? = nil,
+        proBusinessName:  String  = "",
+        proLogoUrl:       String  = "",
+        resolutionNotes:  String  = "",
+        leadId:           String  = "",
+        thumbnailUrl:     String  = "",
+        proId:            String  = "",
+        hasReviewed:      Bool    = false,
+        assignedTechName: String  = "",
+        invoiceUrl:       String  = ""
     ) {
         self.id              = id
         self.categoryRaw     = categoryRaw
@@ -59,8 +63,10 @@ final class RepairHistoryEntry {
         self.resolutionNotes = resolutionNotes
         self.leadId          = leadId
         self.thumbnailUrl    = thumbnailUrl
-        self.proId           = proId
-        self.hasReviewed     = hasReviewed
+        self.proId            = proId
+        self.hasReviewed      = hasReviewed
+        self.assignedTechName = assignedTechName
+        self.invoiceUrl       = invoiceUrl
     }
 
     // MARK: – Computed
