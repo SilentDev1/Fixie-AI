@@ -5,8 +5,6 @@ broken — an appliance, fixture, or device — and Fixie identifies it, diagnos
 walks you through a repair with step-by-step guides and the right tools, and, when a job is beyond
 DIY, connects you to verified local repair pros.
 
-> ⚠️ **Note:** this repository is being prepared for public release. Do not publish it until the
-> committed credentials have been rotated and removed from history (see *Configuration & security*).
 
 ## What it does
 
